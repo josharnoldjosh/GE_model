@@ -60,10 +60,15 @@ class Manager:
 			image = ToTensor()(image)						
 			images.append(image)		
 		X = torch.stack(images)		
-			
+		X = X.type('torch.FloatTensor')
+
 		# construct Y
 		coords = data.iloc[:,2:]
 		y = torch.tensor(coords.values)		
+
+		if torch.cuda.is_available() and config["cuda"]:
+			X = X.cuda()
+			y = y.cuda()
 
 		return X, y
 

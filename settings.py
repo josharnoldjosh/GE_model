@@ -3,5 +3,6 @@ config = {
 	"coords_path":"coords.csv", # path to the coords.csv file
 	"batch_size":16, # batch size used during training
 	"num_k_fold":5, # number of k folds
-	"num_epoch":10 # number of epochs
+	"num_epoch":10, # number of epochs
+	"cuda":True
 }
