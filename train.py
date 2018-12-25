@@ -1,12 +1,16 @@
 from settings import config
 import data as Data
-from model import Model
+import model as Model
 
 if __name__ == '__main__':
 	
 	data = Data.Manager()
 
-	model = Model()
+	model = Model.CNN()
+
+	loss = Model.loss()
+
+	optimizer = Model.optimizer(model)
 
 	# use k fold cross validation
 	for train, test in data:	
@@ -19,14 +23,19 @@ if __name__ == '__main__':
 			print("[EPOCH]", epoch+1)
 
 			# process data in batches
-			for batch in Data.BatchIterator(train):		
+			for batch in Data.BatchIterator(train):
+
+				optimizer.zero_grad()
 				
 				X, y = data.preprocess(batch)			
 
-				model(X)
+				y_hat = model(X)
+								
+				error = loss(y_hat, y)				
+				error.backward()
+				optimizer.step()
 
-				print("*data passed")
-
+				print("* loss:", error.data[0])
 
 		# evaluate model
 		print("[EVALUATING]")		

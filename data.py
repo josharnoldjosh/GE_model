@@ -78,6 +78,7 @@ class Manager:
 		# construct Y
 		coords = data.iloc[:,2:]
 		y = torch.tensor(coords.values)
+		y = y.type("torch.FloatTensor")
 		
 		if torch.cuda.is_available() and config["cuda"]:
 			X = X.cuda()
