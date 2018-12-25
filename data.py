@@ -47,25 +47,38 @@ class Manager:
 
 		return train, test
 
+	def load_image(self, path):
+		images = Image.open(path)
+		result = []
+		n = config["num_input_channels"] # must standarize input		
+		for i in range(n):		
+			images.seek(i)
+			image = images.resize((512, 512))						
+			image = ToTensor()(image)
+			image = image.type("torch.FloatTensor")
+			result.append(image)
+		output = torch.cat(result)
+		#print(output.size())
+		return output
+
+
 	def preprocess(self, data):
 		""" Prepare data to go into the model """
 
 		# construct X
-		images = []
+		X = []
 		patients = data["Patient"]		
 		for file_name in patients:		
 			path = config["image_dir"] + file_name + "_raw.tif"	
-			image = Image.open(path)			
-			image = image.resize((512,512)) # import to resize to same image size
-			image = ToTensor()(image)						
-			images.append(image)		
-		X = torch.stack(images)		
-		X = X.type('torch.FloatTensor')
+			image = self.load_image(path)								
+			X.append(image)	
+		X = torch.stack(X)
+		#print(X.size())		
 
 		# construct Y
 		coords = data.iloc[:,2:]
-		y = torch.tensor(coords.values)		
-
+		y = torch.tensor(coords.values)
+		
 		if torch.cuda.is_available() and config["cuda"]:
 			X = X.cuda()
 			y = y.cuda()
@@ -87,9 +100,9 @@ class BatchIterator:
 		upper_idx = (self.batch_idx+1)*self.batch_size
 		lower_idx = self.batch_idx*self.batch_size
 
-		if lower_idx < len(self.data[0]):
+		if lower_idx < len(self.data):
 			self.batch_idx += 1
-			return self.data[0][lower_idx:upper_idx], self.data[1][lower_idx:upper_idx]
+			return self.data[lower_idx:upper_idx]
 
 		self.batch_number = 0
 		raise StopIteration

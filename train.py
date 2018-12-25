@@ -18,12 +18,14 @@ if __name__ == '__main__':
 			
 			print("[EPOCH]", epoch+1)
 
-			X, y = data.preprocess(train)			
-
 			# process data in batches
-			for batch_X, batch_y in Data.BatchIterator((X, y)):
+			for batch in Data.BatchIterator(train):		
+				
+				X, y = data.preprocess(batch)			
+
 				model(X)
-				print("hi")
+
+				print("*data passed")
 
 
 		# evaluate model
