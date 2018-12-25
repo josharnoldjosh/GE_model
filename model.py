@@ -9,10 +9,14 @@ class Model(nn.Module):
 
 		self.conv1 = nn.Conv2d(config["num_input_channels"], 40, kernel_size=(5, 5), stride=1, padding=(1,1))		
 		self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+		self.fc1 = torch.nn.Linear(41616000, 64)
+		self.fc2 = torch.nn.Linear(64, 6)
 		
 		if torch.cuda.is_available() and config["cuda"]:
 			self.conv1.cuda()		
 			self.pool1.cuda()	
+			self.fc1.cuda()
+			self.fc2.cuda()
 
 		return
 
@@ -23,6 +27,12 @@ class Model(nn.Module):
 		x = F.relu(x)
 
 		x = self.pool1(x)
+
+		x = x.view(-1, 41616000) # resize to one dimension
+
+		x = F.relu(self.fc1(x))
+        
+		x = self.fc2(x)
 
 		print(x.size())
 
