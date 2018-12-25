@@ -21,8 +21,7 @@ if __name__ == '__main__':
 		for epoch in range(config["num_epoch"]):
 			
 			print("[EPOCH]", epoch+1)
-
-			# process data in batches
+			
 			for batch in Data.BatchIterator(train):
 
 				optimizer.zero_grad()
@@ -35,9 +34,16 @@ if __name__ == '__main__':
 				error.backward()
 				optimizer.step()
 
-				print("* loss:", error.data[0])
+				print("	* loss:", error.item())
 
 		# evaluate model
 		print("[EVALUATING]")		
+
+		for batch in Data.BatchIterator(test):
+			X, y = data.preprocess(batch)
+			y_hat = model(X)
+			result = torch.pairwise_distance(y_hat, y)
+			print("	* result:", result)
+
 
 	print("\n[DONE]")
