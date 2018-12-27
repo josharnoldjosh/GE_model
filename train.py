@@ -33,8 +33,10 @@ if __name__ == '__main__':
 
 				y_hat = model(X)
 								
-				error = loss(y_hat, y)				
+				error = loss(y_hat, y)		
+
 				error.backward()
+				
 				optimizer.step()
 
 				if i%8 == 0:
