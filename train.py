@@ -1,28 +1,31 @@
 from settings import config
 import data as Data
 import model as Model
+import torch
 
 if __name__ == '__main__':
 	
 	data = Data.Manager()
 
-	model = Model.CNN()
-
-	loss = Model.loss()
-
-	optimizer = Model.optimizer(model)
-
 	# use k fold cross validation
+	av_cosine_sim = 0
 	for train, test in data:	
 
-		print("\n[STARTING NEW FOLD]")	
+		print("\n[STARTING NEW FOLD]")
+		model = Model.CNN()
+		loss = Model.loss()
+		optimizer = Model.optimizer(model)
 		
 		# train model
 		for epoch in range(config["num_epoch"]):
 			
-			print("[EPOCH]", epoch+1)
+			print("\n[EPOCH]", epoch+1)
 			
+			i = 0
+
 			for batch in Data.BatchIterator(train):
+
+				i += 1
 
 				optimizer.zero_grad()
 				
@@ -34,16 +37,12 @@ if __name__ == '__main__':
 				error.backward()
 				optimizer.step()
 
-				print("	* loss:", error.item())
+				if i%8 == 0:
+					print("	* loss:", error.item())
 
 		# evaluate model
-		print("[EVALUATING]")		
-
-		for batch in Data.BatchIterator(test):
-			X, y = data.preprocess(batch)
-			y_hat = model(X)
-			result = torch.pairwise_distance(y_hat, y)
-			print("	* result:", result)
-
+		print("\n[EVALUATING]")		
+		av_cosine_sim += model.evaluate(test, data)			
 
 	print("\n[DONE]")
+	print("Final averaged cosine similarity over", config["num_k_fold"], "k-folds:", av_cosine_sim/config["num_k_fold"],"\n")

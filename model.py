@@ -3,7 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+import numpy as np
+import scipy.spatial.distance as distance
+import data as Data
 
 def loss():
 	return torch.nn.MSELoss()
@@ -44,4 +46,23 @@ class CNN(nn.Module):
 		
 		return x
 
-		
+	def evaluate(self, test, data):
+
+		def cosine_sim(y_hat, y):
+			a = y_hat.cpu().detach().numpy()
+			b = y.cpu().detach().numpy()
+			result = 0
+			for row in range(len(a)):
+				result += abs(1 - distance.cosine(a[row], b[row]))
+			result = result/len(a)
+			return result
+
+		result = 0		
+		for batch in Data.BatchIterator(test):
+			X, y = data.preprocess(batch)
+			y_hat = self.forward(X)
+			result += cosine_sim(y_hat, y)
+
+		result = result/(len(test)/config["batch_size"])
+		print("	* Average cosine similarity", result)
+		return result
