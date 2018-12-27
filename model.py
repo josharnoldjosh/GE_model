@@ -8,10 +8,12 @@ import scipy.spatial.distance as distance
 import data as Data
 
 def loss():
-	return torch.nn.MSELoss()
+	loss = torch.nn.MSELoss()
+	loss.cuda()
+	return loss
 
 def optimizer(model):	
-	return optim.Adam(model.parameters(), lr=config["learning_rate"])
+	return optim.Adam(model.parameters(), lr=config["learning_rate"])	
 
 class CNN(nn.Module):
 	def __init__(self):
