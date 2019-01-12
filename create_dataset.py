@@ -3,6 +3,8 @@ import pandas as pd
 from PIL import Image
 from random import shuffle
 from random import randint
+import numpy
+import uuid
 
 def load_csv():
 	"""
@@ -39,14 +41,31 @@ def n_frames(img):
 		i += 1
 	return i
 
+def save_image(image):
+	"""
+	Will save an image to file, then return its filename.
+	"""
+
+	# generate unique token
+	unq = 'cropped/' + str(uuid.uuid4().hex[:6].upper()) + '.jpg'
+
+	# ensure cropped exists
+	ensure_dir("cropped/") 
+
+	image.mode = 'I'
+	image.point(lambda i:i*(1./256)).convert('L').save(unq)
+
+	return unq
+
 def add_crop_to_row(cropped_img, malignant, x1, x2, y1, y2, z):
 	"""
 	Takes an image and its values and formats it into a row in an array.
 	"""
-	return [{'image':cropped_img, 'malignant':malignant,
+	unq = save_image(cropped_img)
+
+	return [{'image':unq, 'malignant':malignant,
 	'x1':x1, 'x2':x2, 'y1':y1, 'y2':y2, 'z':z,
-	'x_size':cropped_img.size[0],
-	'y_size':cropped_img.size[1]}]
+	'image_size':cropped_img.size}]
 
 def crop_malignant(img, x1, x2, y1, y2, z1, z2):
 	"""
@@ -130,7 +149,7 @@ def crop_benign(img, x1, x2, y1, y2, z1, z2):
 		cropped_img = crop_img(img, X1, X2, Y1, Y2, z)			
 
 		# add to dataframe
-		output += add_crop_to_row(cropped_img, 0, x1, x2, y1, y2, z)
+		output += add_crop_to_row(cropped_img, 0, X1, X2, Y1, Y2, z)
 
 	return output
 
@@ -158,7 +177,7 @@ if __name__ == '__main__':
 	# create dataframe
 	result = pd.DataFrame(output)
 
-	# save dataframe - save this in different format
-	result.to_csv("dataset.csv", sep='\t')
+	# save dataframe
+	result.to_csv("dataset.csv")
 
 	print("script done.")
