@@ -1,109 +1,114 @@
 from settings import config
 import pandas as pd
 from sklearn.model_selection import KFold
-import torch
 from PIL import Image
+import torch
 from torchvision.transforms import ToTensor
 
-class Manager:
+class BatchLoader:
 	"""
-	Manages data for the project.
+	Loads batches of a data at a time
 	"""
 
-	def __init__(self):				
-		self.load_data()
-		self.reset()
-		return
-
-	def load_data(self):
-		# load data frame
-		print("[LOADING DATA]")
-		self.df = pd.read_csv(config["coords_path"])	
-		return
-
-	def reset(self):
-		"""Resets the data"""
-
-		# create k fold for cross validation
-		self.kf = KFold(n_splits = config["num_k_fold"], shuffle = True, random_state = 2).split(self.df)
-
-		# set the current k fold to 0 
-		self.fold = 0
-		return
-
-	def __iter__(self):
-		return self
-
-	def __next__(self):
-		""" iterate through k folds """
-
-		self.fold += 1
-		if self.fold > config["num_k_fold"]:
-			raise StopIteration
-
-		data = next(self.kf, None)
-		train = self.df.iloc[data[0]]
-		test =  self.df.iloc[data[1]]
-
-		return train, test
-
-	def load_image(self, path):
-		images = Image.open(path)
-		result = []
-		n = config["num_input_channels"] # must standarize input		
-		for i in range(n):		
-			images.seek(i)
-			image = images.resize((512, 512))						
-			image = ToTensor()(image)
-			image = image.type("torch.FloatTensor")
-			result.append(image)
-		output = torch.cat(result)
-		#print(output.size())
-		return output
-
-
-	def preprocess(self, data):
-		""" Prepare data to go into the model """
-
-		# construct X
-		X = []
-		patients = data["Patient"]		
-		for file_name in patients:		
-			path = config["image_dir"] + file_name + "_raw.tif"	
-			image = self.load_image(path)								
-			X.append(image)	
-		X = torch.stack(X)
-		#print(X.size())		
-
-		# construct Y
-		coords = data.iloc[:,2:]
-		y = torch.tensor(coords.values)
-		y = y.type("torch.FloatTensor")
-		
-		if torch.cuda.is_available() and config["cuda"]:
-			X = X.cuda()
-			y = y.cuda()
-
-		return X, y
-
-class BatchIterator:
 	def __init__(self, data):
+		"""
+		Inits the batch loader with a dataset to load in batches.
+		"""
 		self.data = data
-		self.index = 0
-		self.batch_size = config["batch_size"]	
-		self.batch_idx = 0	
-		return
+		self.batch_size = config["batch_size"]
+		self.batch_idx = 0
 
 	def __iter__(self):
+		"""
+		Required method.
+		"""
 		return self
 
 	def __next__(self):
+		"""
+		Serve out fresh batches.
+		"""
 		upper_idx = (self.batch_idx+1)*self.batch_size
 		lower_idx = self.batch_idx*self.batch_size
 
 		if lower_idx < len(self.data):
 			self.batch_idx += 1
-			return self.data[lower_idx:upper_idx]
+			return self.preprocess_batch(self.data[lower_idx:upper_idx])
 
 		self.batch_number = 0
 		raise StopIteration
+
+	def preprocess_batch(self, data):
+		"""
+		Preprocess a batch to go into the model.		
+		"""
+
+		# construct X
+		X = []
+		for path in data["image"]:
+			image = Image.open(path)
+			image = image.resize((config["image_resize"], config["image_resize"]))
+			image = ToTensor()(image)
+			image = image.type("torch.FloatTensor")
+			X.append(image)
+
+		# construct y
+		y = data["malignant"]	
+		y = torch.tensor(y.values)
+		y = y.type("torch.FloatTensor")
+		
+		if torch.cuda.is_available():
+			X = X.cuda()
+			y = y.cuda()
+
+		return X, y
+
+
+class Data:
+	"""
+	Loads and iterates over the data.
+	"""
+
+	def __init__(self):	
+		"""
+		Initialize the class
+		"""		
+		self.data = None
+		self.kf = None
+		self.fold = None
+
+		self.load_data()
+		self.reset_kfold()
+
+	def reset_kfold(self):
+		"""
+		Resets the k-fold data split
+		"""
+		self.kf = KFold(n_splits = config["num_k_fold"], shuffle = True, random_state = 2).split(self.data)
+		self.fold = 0
+
+	def load_data(self):
+		"""
+		Loads a csv file into the class.
+		"""
+		self.data = pd.read_csv(config["dataset"])		
+	
+	def __iter__(self):
+		"""
+		Required method.
+		"""
+		return self	
+
+	def __next__(self):
+		"""
+		Returns the next k fold iteration.
+		"""
+		self.fold += 1
+		if self.fold > config["num_k_fold"]:
+			raise StopIteration
+
+		split = next(self.kf, None)
+		train = self.data.iloc[split[0]]
+		test =  self.data.iloc[split[1]]
+		
+		return BatchLoader(train), BatchLoader(test)
