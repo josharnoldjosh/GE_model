@@ -35,7 +35,7 @@ class BatchLoader:
 			self.batch_idx += 1
 			return self.preprocess_batch(self.data[lower_idx:upper_idx])
 
-		self.batch_number = 0
+		self.batch_idx = 0
 		raise StopIteration
 
 	def preprocess_batch(self, data):
@@ -49,8 +49,9 @@ class BatchLoader:
 			image = Image.open(path)
 			image = image.resize((config["image_resize"], config["image_resize"]))
 			image = ToTensor()(image)
-			image = image.type("torch.FloatTensor")
-			X.append(image)
+			image = image.type("torch.FloatTensor")		
+			X.append(image)		
+		X = torch.stack(X)		
 
 		# construct y
 		y = data["malignant"]	
@@ -62,7 +63,6 @@ class BatchLoader:
 			y = y.cuda()
 
 		return X, y
-
 
 class Data:
 	"""
